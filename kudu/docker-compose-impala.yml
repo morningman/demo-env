@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  kudu-master:
+    image: apache/kudu:latest
+    container_name: kudu-master
+    hostname: kudu-master
+    user: "0:0"  # Run as root user
+    ports:
+      - "7051:7051"  # Master RPC port
+      - "8051:8051"  # Master Web UI port
+    command: ["master"]
+    environment:
+      - MASTER_ARGS=--fs_wal_dir=/var/lib/kudu/master --fs_data_dirs=/var/lib/kudu/master --webserver_port=8051 --rpc_bind_addresses=0.0.0.0:7051
+    networks:
+      - kudu-network
+    volumes:
+      - kudu-master-data:/var/lib/kudu/master
+
+  kudu-tserver:
+    image: apache/kudu:latest
+    container_name: kudu-tserver
+    hostname: kudu-tserver
+    user: "0:0"  # Run as root user
+    ports:
+      - "7050:7050"  # TServer RPC port
+      - "18050:8050"  # TServer Web UI port (to avoid conflicts with Doris)
+    command: ["tserver"]
+    environment:
+      - TSERVER_ARGS=--fs_wal_dir=/var/lib/kudu/tserver --fs_data_dirs=/var/lib/kudu/tserver --tserver_master_addrs=kudu-master:7051 --webserver_port=8050 --rpc_bind_addresses=0.0.0.0:7050
+    depends_on:
+      - kudu-master
+    networks:
+      - kudu-network
+    volumes:
+      - kudu-tserver-data:/var/lib/kudu/tserver
+
+  impala:
+    image: apache/impala:4.0.0-impala_quickstart_hms
+    container_name: impala
+    hostname: impala
+    ports:
+      - "21000:21000"  # Impala Shell port
+      - "25000:25000"  # Impala Daemon Web UI
+    environment:
+      - KUDU_MASTER_HOSTS=kudu-master:7051
+    command: ["-kudu_master_hosts=kudu-master"]
+    depends_on:
+      - kudu-master
+      - kudu-tserver
+    networks:
+      - kudu-network
+
+networks:
+  kudu-network:
+    driver: bridge
+
+volumes:
+  kudu-master-data:
+  kudu-tserver-data:
