@@ -1,0 +1,121 @@
+# Kerberos 5 Configuration for Kafka Environment
+# Generated for EXAMPLE.COM realm
+# Date: 2026-01-30
+
+[libdefaults]
+    # Default realm for this Kerberos installation
+    default_realm = EXAMPLE.COM
+
+    # Ticket lifetimes
+    ticket_lifetime = 24h
+    renew_lifetime = 7d
+
+    # Security settings
+    forwardable = true
+    proxiable = true
+
+    # DNS lookup settings (disabled for better control)
+    dns_lookup_realm = false
+    dns_lookup_kdc = false
+    rdns = false
+
+    # Encryption types - ordered by preference (strongest first)
+    # Remove weak encryption types for better security
+    default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+    default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+    permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+
+    # Clock skew tolerance (default is 5 minutes)
+    clockskew = 300
+
+    # UDP packet size preference
+    udp_preference_limit = 1
+
+    # Verify KDC certificate (set to false for testing, true for production with proper certs)
+    verify_ap_req_nofail = false
+
+[realms]
+    EXAMPLE.COM = {
+        # KDC server address
+        kdc = kdc.example.com:88
+
+        # Admin server for kadmin operations
+        admin_server = kdc.example.com:749
+
+        # Default domain for this realm
+        default_domain = example.com
+
+        # Supported encryption types for this realm
+        supported_enctypes = aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal
+    }
+
+[domain_realm]
+    # Map domains to realms
+    .example.com = EXAMPLE.COM
+    example.com = EXAMPLE.COM
+
+    # Map specific hosts to realms
+    .kdc.example.com = EXAMPLE.COM
+    .kafka.example.com = EXAMPLE.COM
+    .zookeeper.example.com = EXAMPLE.COM
+    .schema-registry.example.com = EXAMPLE.COM
+
+[logging]
+    # Logging configuration
+    # Options: FILE:/path/to/file, SYSLOG[:severity[:facility]], STDERR, CONSOLE, DEVICE=/dev/ttyXX
+
+    # KDC logging
+    kdc = FILE:/var/log/krb5kdc.log
+
+    # Admin server logging
+    admin_server = FILE:/var/log/kadmin.log
+
+    # Client library logging
+    default = FILE:/var/log/krb5libs.log
+
+[appdefaults]
+    # Application-specific defaults
+
+    # PAM settings
+    pam = {
+        debug = false
+        ticket_lifetime = 36000
+        renew_lifetime = 36000
+        forwardable = true
+        krb4_convert = false
+    }
+
+    # Kafka-specific settings
+    kafka = {
+        forwardable = true
+        renewable = true
+        no_addresses = true
+    }
+
+# Additional notes for production use:
+#
+# 1. Security Hardening:
+#    - Use only AES encryption types
+#    - Enable rdns = true if DNS is properly configured and secured
+#    - Set verify_ap_req_nofail = true with proper KDC certificates
+#
+# 2. Performance Tuning:
+#    - Adjust ticket_lifetime based on your security policy
+#    - Consider using DNS SRV records for automatic KDC discovery
+#    - Monitor clockskew issues and adjust clockskew if needed
+#
+# 3. High Availability:
+#    - Add multiple KDC servers: kdc = kdc1.example.com:88
+#                                 kdc = kdc2.example.com:88
+#    - Configure slave KDCs for redundancy
+#
+# 4. Integration with Active Directory:
+#    - Add AD realm to [realms] section
+#    - Configure cross-realm trust if needed
+#    - Map AD domains in [domain_realm]
+#
+# 5. Troubleshooting:
+#    - Enable debug logging: default = FILE:/var/log/krb5libs.log
+#    - Check clock synchronization (NTP)
+#    - Verify DNS resolution for all hosts
+#    - Test with: kinit -V principal@REALM

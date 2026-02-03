@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  kdc:
+    image: gcavalcante8808/krb5-server:latest
+    container_name: kdc
+    hostname: kdc.example.com
+    environment:
+      - KRB5_REALM=EXAMPLE.COM
+      - KRB5_KDC=kdc.example.com
+      - KRB5_PASS=admin123
+    volumes:
+      - ./kerberos/krb5.conf:/etc/krb5.conf
+      - ./kerberos/kdc.conf:/var/kerberos/krb5kdc/kdc.conf
+      - ./kerberos/kadm5.acl:/var/kerberos/krb5kdc/kadm5.acl
+      - ./keytabs:/keytabs
+      - ./scripts:/scripts
+    ports:
+      - "88:88"
+      - "749:749"
+    networks:
+      kafka_net:
+        ipv4_address: 172.25.0.10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    hostname: zookeeper.example.com
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/zookeeper_jaas.conf
+        -Djava.security.krb5.conf=/etc/krb5.conf
+        -Dsun.security.krb5.debug=true
+    volumes:
+      - ./kerberos/krb5.conf:/etc/krb5.conf
+      - ./kafka-config/zookeeper_jaas.conf:/etc/kafka/secrets/zookeeper_jaas.conf
+      - ./keytabs:/etc/kafka/secrets/keytabs
+    ports:
+      - "2181:2181"
+    networks:
+      kafka_net:
+        ipv4_address: 172.25.0.20
+    depends_on:
+      - kdc
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    hostname: kafka.example.com
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper.example.com:2181
+      KAFKA_ADVERTISED_LISTENERS: SASL_PLAINTEXT://kafka.example.com:9092
+      KAFKA_LISTENERS: SASL_PLAINTEXT://0.0.0.0:9092
+      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: GSSAPI
+      KAFKA_SASL_ENABLED_MECHANISMS: GSSAPI
+      KAFKA_SASL_KERBEROS_SERVICE_NAME: kafka
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf
+        -Djava.security.krb5.conf=/etc/krb5.conf
+        -Dsun.security.krb5.debug=true
+    volumes:
+      - ./kerberos/krb5.conf:/etc/krb5.conf
+      - ./kafka-config/kafka_server_jaas.conf:/etc/kafka/secrets/kafka_server_jaas.conf
+      - ./kafka-config/producer.properties:/etc/kafka/secrets/producer.properties
+      - ./kafka-config/consumer.properties:/etc/kafka/secrets/consumer.properties
+      - ./keytabs:/etc/kafka/secrets/keytabs
+    ports:
+      - "9092:9092"
+    networks:
+      kafka_net:
+        ipv4_address: 172.25.0.30
+    depends_on:
+      - zookeeper
+      - kdc
+    extra_hosts:
+      - "kdc.example.com:172.25.0.10"
+      - "zookeeper.example.com:172.25.0.20"
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry
+    hostname: schema-registry.example.com
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry.example.com
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: SASL_PLAINTEXT://kafka.example.com:9092
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: GSSAPI
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_KERBEROS_SERVICE_NAME: kafka
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/etc/kafka/secrets/keytabs/producer.keytab" principal="producer@EXAMPLE.COM";
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      # Disable BASIC auth for now - can be enabled later if needed
+      # SCHEMA_REGISTRY_AUTHENTICATION_METHOD: BASIC
+      # SCHEMA_REGISTRY_AUTHENTICATION_ROLES: admin,developer,user
+      # SCHEMA_REGISTRY_AUTHENTICATION_REALM: SchemaRegistry
+      # Password file configuration for BASIC auth
+      # SCHEMA_REGISTRY_AUTH_PASSWORD_ENCODER_SECRET: schema-registry-secret
+      # SCHEMA_REGISTRY_AUTH_PASSWORD_ENCODER_ITERATIONS: 4096
+      # JAAS configuration for password file
+      SCHEMA_REGISTRY_OPTS: -Djava.security.krb5.conf=/etc/krb5.conf
+    volumes:
+      - ./kerberos/krb5.conf:/etc/krb5.conf
+      - ./keytabs:/etc/kafka/secrets/keytabs
+      - ./schema-registry/password.properties:/etc/schema-registry/password.properties
+    ports:
+      - "8081:8081"
+    networks:
+      kafka_net:
+        ipv4_address: 172.25.0.40
+    depends_on:
+      - kafka
+      - kdc
+    extra_hosts:
+      - "kdc.example.com:172.25.0.10"
+      - "kafka.example.com:172.25.0.30"
+
+networks:
+  kafka_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
