@@ -148,3 +148,16 @@ python3 insert-data.py
 3. Python data insertion scripts require kudu-python library (optional): `pip install kudu-python`
 4. Data is persisted in Docker volumes, stopping containers will not lose data
 5. All Docker commands are run with sudo to avoid permission issues
+
+## Doris Catalog
+
+```sql
+CREATE CATALOG kudu PROPERTIES (
+    'type' = 'trino-connector',
+    'trino.connector.name' = 'kudu',
+    'trino.kudu.client.master-addresses' = '172.20.32.136:7051',
+    'trino.kudu.authentication.type' = 'NONE',
+    'trino.kudu.schema-emulation.enabled' = 'true',
+    'trino.kudu.schema-emulation.prefix' = ''
+);
+```
