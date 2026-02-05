@@ -1,0 +1,41 @@
+{
+  "type": "record",
+  "name": "Topic1Data",
+  "namespace": "com.nrdp.avro",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long",
+      "doc": "Record ID"
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "doc": "Message content"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Creation timestamp in milliseconds"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "Status",
+        "symbols": ["ACTIVE", "INACTIVE", "PENDING"]
+      },
+      "default": "PENDING",
+      "doc": "Record status"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "default": {},
+      "doc": "Additional metadata"
+    }
+  ]
+}
