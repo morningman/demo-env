@@ -24,11 +24,13 @@ SCHEMA_REGISTRY_USER = 'admin'
 SCHEMA_REGISTRY_PASSWORD = 'admin123'
 
 # Kafka consumer configuration (no authentication)
+# Note: enable.auto.commit is False to allow repeated consumption
+# without moving the offset, so you can view existing data multiple times
 consumer_config = {
     'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
     'group.id': 'avro-consumer-group',
     'auto.offset.reset': 'earliest',
-    'enable.auto.commit': True,
+    'enable.auto.commit': False,  # Do not commit offset to allow repeated consumption
 }
 
 # Schema Registry client configuration
