@@ -43,6 +43,14 @@ services:
       echo 'Creating topic: simple-topic'
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic simple-topic --partitions 5 --replication-factor 1
 
-      echo 'Topic created successfully'
+      echo 'Creating topic: tp1.test1'
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic tp1.test1 --partitions 3 --replication-factor 1
+
+      echo 'Creating topic: TP1.TEST1'
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic TP1.TEST1 --partitions 3 --replication-factor 1
+
+      echo 'All topics created successfully'
       kafka-topics --bootstrap-server kafka:29092 --describe --topic simple-topic
+      kafka-topics --bootstrap-server kafka:29092 --describe --topic tp1.test1
+      kafka-topics --bootstrap-server kafka:29092 --describe --topic TP1.TEST1
       "

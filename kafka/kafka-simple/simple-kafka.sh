@@ -23,7 +23,10 @@ function start() {
     echo "✓ Kafka environment started"
     echo ""
     echo "Kafka broker: localhost:9092"
-    echo "Topic: simple-topic (5 partitions)"
+    echo "Topics:"
+    echo "  - simple-topic (5 partitions)"
+    echo "  - tp1.test1 (3 partitions)"
+    echo "  - TP1.TEST1 (3 partitions)"
     echo ""
     show_status
 }
@@ -59,10 +62,23 @@ function show_logs() {
 
 function show_topic() {
     print_header "Topic information"
+    echo "Topic: simple-topic"
     sudo docker exec kafka-simple kafka-topics \
         --bootstrap-server localhost:9092 \
         --describe \
         --topic simple-topic
+    echo ""
+    echo "Topic: tp1.test1"
+    sudo docker exec kafka-simple kafka-topics \
+        --bootstrap-server localhost:9092 \
+        --describe \
+        --topic tp1.test1
+    echo ""
+    echo "Topic: TP1.TEST1"
+    sudo docker exec kafka-simple kafka-topics \
+        --bootstrap-server localhost:9092 \
+        --describe \
+        --topic TP1.TEST1
 }
 
 function produce() {

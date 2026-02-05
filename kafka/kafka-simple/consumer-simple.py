@@ -13,10 +13,11 @@ import uuid
 # Kafka configuration
 BOOTSTRAP_SERVERS = ['localhost:9092']
 TOPIC = 'simple-topic'
+TOPICS = ['simple-topic', 'tp1.test1', 'TP1.TEST1']
 
 def view_messages(timeout_ms=5000):
     """
-    View all messages in the topic
+    View all messages in all topics
 
     Args:
         timeout_ms: Consumer timeout (milliseconds)
@@ -29,9 +30,9 @@ def view_messages(timeout_ms=5000):
 
     consumer = None
     try:
-        # Create consumer
+        # Create consumer - subscribe to all topics
         consumer = KafkaConsumer(
-            TOPIC,
+            *TOPICS,  # Subscribe to all topics
             bootstrap_servers=BOOTSTRAP_SERVERS,
             group_id=temp_group_id,
             auto_offset_reset='earliest',  # Start from earliest message
@@ -41,35 +42,45 @@ def view_messages(timeout_ms=5000):
         )
 
         print(f"Connected to Kafka successfully")
-        print(f"Topic: {TOPIC}")
-        print(f"Number of partitions: {len(consumer.partitions_for_topic(TOPIC))}\n")
-        print("=" * 80)
+        print(f"Topics: {', '.join(TOPICS)}")
 
-        # Statistics by partition
-        partition_stats = {}
+        # Display partition count for each topic
+        for topic in TOPICS:
+            partitions = consumer.partitions_for_topic(topic)
+            if partitions:
+                print(f"  - {topic}: {len(partitions)} partitions")
+
+        print("\n" + "=" * 80)
+
+        # Statistics by topic and partition
+        topic_partition_stats = {}
         total_messages = 0
 
         # Consume messages
         for message in consumer:
+            topic = message.topic
             partition = message.partition
             offset = message.offset
             key = message.key.decode('utf-8') if message.key else None
             value = message.value
 
             # Statistics
-            if partition not in partition_stats:
-                partition_stats[partition] = {
+            if topic not in topic_partition_stats:
+                topic_partition_stats[topic] = {}
+
+            if partition not in topic_partition_stats[topic]:
+                topic_partition_stats[topic][partition] = {
                     'count': 0,
                     'first_offset': offset,
                     'last_offset': offset
                 }
 
-            partition_stats[partition]['count'] += 1
-            partition_stats[partition]['last_offset'] = offset
+            topic_partition_stats[topic][partition]['count'] += 1
+            topic_partition_stats[topic][partition]['last_offset'] = offset
             total_messages += 1
 
             # Print message
-            print(f"Partition: {partition} | Offset: {offset} | Key: {key}")
+            print(f"Topic: {topic} | Partition: {partition} | Offset: {offset} | Key: {key}")
             print(f"  Content: {json.dumps(value, ensure_ascii=False, indent=4)}")
             print("-" * 80)
 
@@ -78,15 +89,17 @@ def view_messages(timeout_ms=5000):
         print("Statistics:")
         print("=" * 80)
 
-        for partition in sorted(partition_stats.keys()):
-            stats = partition_stats[partition]
-            print(f"Partition {partition}: {stats['count']} messages "
-                  f"(offset {stats['first_offset']} - {stats['last_offset']})")
+        for topic in sorted(topic_partition_stats.keys()):
+            print(f"\nTopic: {topic}")
+            for partition in sorted(topic_partition_stats[topic].keys()):
+                stats = topic_partition_stats[topic][partition]
+                print(f"  Partition {partition}: {stats['count']} messages "
+                      f"(offset {stats['first_offset']} - {stats['last_offset']})")
 
-        print(f"\nTotal: {total_messages} messages")
+        print(f"\nTotal: {total_messages} messages across {len(topic_partition_stats)} topics")
 
         if total_messages == 0:
-            print("\nNote: Topic currently has no messages")
+            print("\nNote: Topics currently have no messages")
 
     except Exception as e:
         print(f"\nError: {e}")
@@ -97,7 +110,7 @@ def view_messages(timeout_ms=5000):
             print(f"\nConsumer closed")
 
 def show_topic_info():
-    """Display detailed topic information"""
+    """Display detailed topic information for all topics"""
     consumer = None
     try:
         # Create temporary consumer to get topic info
@@ -106,30 +119,34 @@ def show_topic_info():
             group_id=f'info-{uuid.uuid4().hex[:8]}'
         )
 
-        partitions = consumer.partitions_for_topic(TOPIC)
-
-        if not partitions:
-            print(f"Topic '{TOPIC}' does not exist or is not accessible")
-            return
-
         print("\n" + "=" * 80)
         print("Topic Partition Information:")
         print("=" * 80)
 
-        # Get start and end offset for each partition
-        topic_partitions = [TopicPartition(TOPIC, p) for p in partitions]
+        for topic_name in TOPICS:
+            partitions = consumer.partitions_for_topic(topic_name)
 
-        # Get beginning and end positions
-        beginning_offsets = consumer.beginning_offsets(topic_partitions)
-        end_offsets = consumer.end_offsets(topic_partitions)
+            if not partitions:
+                print(f"\nTopic '{topic_name}': does not exist or is not accessible")
+                continue
 
-        for tp in sorted(topic_partitions, key=lambda x: x.partition):
-            begin = beginning_offsets[tp]
-            end = end_offsets[tp]
-            count = end - begin
-            print(f"Partition {tp.partition}: {count} messages "
-                  f"(offset {begin} - {end-1})" if count > 0
-                  else f"Partition {tp.partition}: 0 messages")
+            print(f"\nTopic: {topic_name}")
+            print("-" * 80)
+
+            # Get start and end offset for each partition
+            topic_partitions = [TopicPartition(topic_name, p) for p in partitions]
+
+            # Get beginning and end positions
+            beginning_offsets = consumer.beginning_offsets(topic_partitions)
+            end_offsets = consumer.end_offsets(topic_partitions)
+
+            for tp in sorted(topic_partitions, key=lambda x: x.partition):
+                begin = beginning_offsets[tp]
+                end = end_offsets[tp]
+                count = end - begin
+                print(f"  Partition {tp.partition}: {count} messages "
+                      f"(offset {begin} - {end-1})" if count > 0
+                      else f"  Partition {tp.partition}: 0 messages")
 
     except Exception as e:
         print(f"Failed to get topic information: {e}")
