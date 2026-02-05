@@ -1,0 +1,52 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "com.example.avro",
+  "fields": [
+    {
+      "name": "order_id",
+      "type": "string",
+      "doc": "Unique order identifier"
+    },
+    {
+      "name": "user_id",
+      "type": "long",
+      "doc": "User ID who placed the order"
+    },
+    {
+      "name": "product_name",
+      "type": "string",
+      "doc": "Product name"
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "doc": "Quantity ordered"
+    },
+    {
+      "name": "price",
+      "type": "double",
+      "doc": "Unit price"
+    },
+    {
+      "name": "total_amount",
+      "type": "double",
+      "doc": "Total order amount"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]
+      },
+      "default": "PENDING",
+      "doc": "Order status"
+    },
+    {
+      "name": "order_date",
+      "type": "long",
+      "doc": "Order timestamp in milliseconds"
+    }
+  ]
+}
