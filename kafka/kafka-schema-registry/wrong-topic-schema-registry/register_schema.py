@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-注册 Avro schema 到 Schema Registry
-特殊场景：topic 名称是 "NRDP.topic1"，但 schema subject 使用 "topic1-value"
+Register Avro schema to Schema Registry
+Special scenario: topic name is "NRDP.topic1", but schema subject uses "topic1-value"
 """
 
 import json
@@ -10,40 +10,40 @@ from requests.auth import HTTPBasicAuth
 import sys
 import os
 
-# 清除代理环境变量，避免访问 localhost 问题
+# Clear proxy environment variables to avoid localhost access issues
 for proxy_var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'no_proxy', 'NO_PROXY']:
     if proxy_var in os.environ:
-        print(f"⚠ 清除环境变量 {proxy_var}...")
+        print(f"⚠ Clearing environment variable {proxy_var}...")
         del os.environ[proxy_var]
 
-# Schema Registry 配置
+# Schema Registry configuration
 SCHEMA_REGISTRY_URL = "http://localhost:8081"
 SCHEMA_REGISTRY_USER = "admin"
 SCHEMA_REGISTRY_PASSWORD = "admin123"
 
-# Schema 配置
+# Schema configuration
 SCHEMA_FILE = "schemas/topic1.avsc"
-SUBJECT_NAME = "topic1-value"  # 注意：这里使用 "topic1"，不是 "NRDP.topic1"
+SUBJECT_NAME = "topic1-value"  # Note: Using "topic1" here, not "NRDP.topic1"
 
 def register_schema(subject, schema_file):
-    """注册 schema 到 Schema Registry"""
-    # 读取 schema 文件
+    """Register schema to Schema Registry"""
+    # Read schema file
     try:
         with open(schema_file, 'r') as f:
             schema_content = json.load(f)
     except FileNotFoundError:
-        print(f"✗ Schema 文件未找到: {schema_file}")
+        print(f"✗ Schema file not found: {schema_file}")
         sys.exit(1)
     except json.JSONDecodeError as e:
-        print(f"✗ Schema 文件 JSON 格式错误 {schema_file}: {e}")
+        print(f"✗ Schema file JSON format error {schema_file}: {e}")
         sys.exit(1)
 
-    # 准备请求载荷
+    # Prepare request payload
     payload = {
         "schema": json.dumps(schema_content)
     }
 
-    # 注册 schema
+    # Register schema
     url = f"{SCHEMA_REGISTRY_URL}/subjects/{subject}/versions"
     try:
         response = requests.post(
@@ -54,22 +54,22 @@ def register_schema(subject, schema_file):
             timeout=10
         )
     except requests.exceptions.RequestException as e:
-        print(f"✗ 连接 Schema Registry 失败: {e}")
+        print(f"✗ Failed to connect to Schema Registry: {e}")
         sys.exit(1)
 
     if response.status_code in [200, 201]:
         result = response.json()
-        print(f"✓ Schema 注册成功: '{subject}'")
+        print(f"✓ Schema registered successfully: '{subject}'")
         print(f"  Schema ID: {result['id']}")
         return result['id']
     else:
-        print(f"✗ Schema 注册失败: '{subject}'")
-        print(f"  状态码: {response.status_code}")
-        print(f"  响应: {response.text}")
+        print(f"✗ Schema registration failed: '{subject}'")
+        print(f"  Status code: {response.status_code}")
+        print(f"  Response: {response.text}")
         sys.exit(1)
 
 def get_subject_info(subject):
-    """获取 subject 的详细信息"""
+    """Get detailed information about a subject"""
     url = f"{SCHEMA_REGISTRY_URL}/subjects/{subject}/versions/latest"
     try:
         response = requests.get(
@@ -78,7 +78,7 @@ def get_subject_info(subject):
             timeout=10
         )
     except requests.exceptions.RequestException as e:
-        print(f"✗ 获取 subject 信息失败: {e}")
+        print(f"✗ Failed to get subject info: {e}")
         return None
 
     if response.status_code == 200:
@@ -87,7 +87,7 @@ def get_subject_info(subject):
         return None
 
 def list_subjects():
-    """列出所有注册的 subjects"""
+    """List all registered subjects"""
     url = f"{SCHEMA_REGISTRY_URL}/subjects"
     try:
         response = requests.get(
@@ -96,40 +96,40 @@ def list_subjects():
             timeout=10
         )
     except requests.exceptions.RequestException as e:
-        print(f"✗ 连接 Schema Registry 失败: {e}")
+        print(f"✗ Failed to connect to Schema Registry: {e}")
         return []
 
     if response.status_code == 200:
         subjects = response.json()
-        print(f"\n已注册的 subjects ({len(subjects)}):")
+        print(f"\nRegistered subjects ({len(subjects)}):")
         for subject in subjects:
             print(f"  - {subject}")
         return subjects
     else:
-        print(f"✗ 列出 subjects 失败")
-        print(f"  状态码: {response.status_code}")
+        print(f"✗ Failed to list subjects")
+        print(f"  Status code: {response.status_code}")
         return []
 
 def main():
-    print("=== Schema Registry - 特殊场景注册 ===")
+    print("=== Schema Registry - Special Scenario Registration ===")
     print(f"URL: {SCHEMA_REGISTRY_URL}")
     print(f"User: {SCHEMA_REGISTRY_USER}")
     print()
-    print("⚠ 特殊场景说明:")
-    print("  - Kafka Topic 名称: NRDP.topic1")
-    print(f"  - Schema Subject 名称: {SUBJECT_NAME}")
-    print("  - 这将导致名称不匹配的情况")
+    print("⚠ Special scenario description:")
+    print("  - Kafka Topic name: NRDP.topic1")
+    print(f"  - Schema Subject name: {SUBJECT_NAME}")
+    print("  - This will cause a name mismatch")
     print()
 
     try:
-        # 注册 schema
-        print(f"1. 注册 Schema 为 subject '{SUBJECT_NAME}'...")
+        # Register schema
+        print(f"1. Registering schema as subject '{SUBJECT_NAME}'...")
         schema_id = register_schema(SUBJECT_NAME, SCHEMA_FILE)
 
         print()
 
-        # 获取 subject 详细信息
-        print(f"2. 获取 subject '{SUBJECT_NAME}' 的详细信息...")
+        # Get subject details
+        print(f"2. Getting detailed info for subject '{SUBJECT_NAME}'...")
         info = get_subject_info(SUBJECT_NAME)
         if info:
             print(f"  Schema ID: {info['id']}")
@@ -138,16 +138,16 @@ def main():
 
         print()
 
-        # 列出所有 subjects
-        print("3. 列出所有已注册的 subjects...")
+        # List all subjects
+        print("3. Listing all registered subjects...")
         list_subjects()
 
-        print("\n✓ Schema 注册完成!")
+        print("\n✓ Schema registration completed!")
         print(f"\nSchema ID: {schema_id}")
-        print(f"\n⚠ 注意: Schema subject 是 '{SUBJECT_NAME}'，但实际的 topic 是 'NRDP.topic1'")
+        print(f"\n⚠ Note: Schema subject is '{SUBJECT_NAME}', but the actual topic is 'NRDP.topic1'")
 
     except Exception as e:
-        print(f"\n✗ Schema 注册失败: {e}")
+        print(f"\n✗ Schema registration failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

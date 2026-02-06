@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Kafka Avro Producer - 特殊场景
-Topic 名称: NRDP.topic1
-Schema Subject: topic1-value (名称不匹配)
+Kafka Avro Producer - Special Scenario
+Topic name: NRDP.topic1
+Schema Subject: topic1-value (name mismatch)
 """
 
 import time
@@ -13,46 +13,46 @@ from confluent_kafka.serialization import SerializationContext, MessageField
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
 
-# 清除代理环境变量，避免访问 localhost 问题
+# Clear proxy environment variables to avoid localhost access issues
 for proxy_var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'no_proxy', 'NO_PROXY']:
     if proxy_var in os.environ:
         del os.environ[proxy_var]
 
-# Kafka 配置
+# Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
-KAFKA_TOPIC = 'NRDP.topic1'  # 实际的 Kafka topic 名称
+KAFKA_TOPIC = 'NRDP.topic1'  # Actual Kafka topic name
 
-# Schema Registry 配置
+# Schema Registry configuration
 SCHEMA_REGISTRY_URL = 'http://localhost:8081'
 SCHEMA_REGISTRY_USER = 'admin'
 SCHEMA_REGISTRY_PASSWORD = 'admin123'
-SCHEMA_SUBJECT = 'topic1-value'  # Schema subject 名称（与 topic 名称不匹配）
+SCHEMA_SUBJECT = 'topic1-value'  # Schema subject name (does not match topic name)
 
-# Kafka producer 配置
+# Kafka producer configuration
 producer_config = {
     'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
 }
 
-# Schema Registry 客户端配置
+# Schema Registry client configuration
 schema_registry_conf = {
     'url': SCHEMA_REGISTRY_URL,
     'basic.auth.user.info': f'{SCHEMA_REGISTRY_USER}:{SCHEMA_REGISTRY_PASSWORD}'
 }
 
 def delivery_report(err, msg):
-    """消息投递回调函数"""
+    """Message delivery callback function"""
     if err is not None:
-        print(f'✗ 消息投递失败: {err}')
+        print(f'✗ Message delivery failed: {err}')
     else:
-        print(f'✓ 消息已投递到 {msg.topic()} [partition {msg.partition()}] offset {msg.offset()}')
+        print(f'✓ Message delivered to {msg.topic()} [partition {msg.partition()}] offset {msg.offset()}')
 
 def create_sample_data(record_id):
-    """创建样例数据"""
+    """Create sample data"""
     statuses = ['ACTIVE', 'INACTIVE', 'PENDING']
 
     return {
         'id': record_id,
-        'message': f'这是第 {record_id} 条消息 - 测试特殊场景',
+        'message': f'This is message {record_id} - testing special scenario',
         'timestamp': int(time.time() * 1000),
         'status': statuses[record_id % 3],
         'metadata': {
@@ -63,8 +63,8 @@ def create_sample_data(record_id):
     }
 
 def produce_messages(producer, avro_serializer, count=10):
-    """生产消息"""
-    print(f"\n=== 生产 {count} 条消息 ===")
+    """Produce messages"""
+    print(f"\n=== Producing {count} messages ===")
     print(f"Topic: {KAFKA_TOPIC}")
     print(f"Schema Subject: {SCHEMA_SUBJECT}")
     print()
@@ -73,8 +73,8 @@ def produce_messages(producer, avro_serializer, count=10):
         data = create_sample_data(i)
 
         try:
-            # 注意：这里传递给 SerializationContext 的是实际的 topic 名称
-            # 但 schema 是从不同的 subject 获取的
+            # Note: Here we pass the actual topic name to SerializationContext
+            # But the schema is fetched from a different subject
             producer.produce(
                 topic=KAFKA_TOPIC,
                 key=str(data['id']).encode('utf-8'),
@@ -84,49 +84,49 @@ def produce_messages(producer, avro_serializer, count=10):
             producer.poll(0)
             time.sleep(0.2)
         except Exception as e:
-            print(f'✗ 生产消息 {i} 失败: {e}')
+            print(f'✗ Failed to produce message {i}: {e}')
 
     producer.flush()
-    print(f"\n✓ 已刷新所有消息到 Kafka")
+    print(f"\n✓ Flushed all messages to Kafka")
 
 def main():
-    print("=== Kafka Avro Producer - 特殊场景 ===")
+    print("=== Kafka Avro Producer - Special Scenario ===")
     print(f"Kafka: {KAFKA_BOOTSTRAP_SERVERS}")
     print(f"Schema Registry: {SCHEMA_REGISTRY_URL}")
     print()
-    print("⚠ 特殊场景说明:")
+    print("⚠ Special scenario description:")
     print(f"  - Kafka Topic: {KAFKA_TOPIC}")
     print(f"  - Schema Subject: {SCHEMA_SUBJECT}")
-    print("  - 名称不匹配的场景测试")
+    print("  - Name mismatch scenario test")
     print()
 
-    # 创建 Schema Registry 客户端
+    # Create Schema Registry client
     schema_registry_client = SchemaRegistryClient(schema_registry_conf)
 
-    # 创建 producer
+    # Create producer
     producer = Producer(producer_config)
 
-    # 从 Schema Registry 获取 schema
-    print("从 Schema Registry 获取 schema...")
+    # Get schema from Schema Registry
+    print("Getting schema from Schema Registry...")
     try:
         schema_version = schema_registry_client.get_latest_version(SCHEMA_SUBJECT)
         schema_str = schema_version.schema.schema_str
-        print(f"✓ Schema 获取成功 (ID: {schema_version.schema_id}, Version: {schema_version.version})")
+        print(f"✓ Schema retrieved successfully (ID: {schema_version.schema_id}, Version: {schema_version.version})")
     except Exception as e:
-        print(f"✗ 获取 schema 失败: {e}")
-        print(f"\n请先运行 register_schema.py 注册 schema!")
+        print(f"✗ Failed to get schema: {e}")
+        print(f"\nPlease run register_schema.py to register schema first!")
         return
 
-    # 创建 Avro 序列化器
+    # Create Avro serializer
     avro_serializer = AvroSerializer(
         schema_registry_client,
         schema_str
     )
 
-    # 生产消息
+    # Produce messages
     produce_messages(producer, avro_serializer, count=10)
 
-    print("\n✓ 消息生产完成!")
+    print("\n✓ Message production completed!")
 
 if __name__ == "__main__":
     main()

@@ -1,11 +1,11 @@
 #!/bin/bash
-# 创建 Kafka topic "NRDP.topic1"
+# Create Kafka topic "NRDP.topic1"
 
 echo "=== Creating Kafka Topic ==="
 echo "Topic Name: NRDP.topic1"
 echo ""
 
-# 使用 kafka-topics 命令创建 topic
+# Use kafka-topics command to create topic
 docker exec -it kafka kafka-topics.sh \
   --create \
   --bootstrap-server localhost:9092 \
