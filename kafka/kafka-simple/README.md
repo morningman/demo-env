@@ -45,6 +45,8 @@ kafka-simple/
 | `topic` | View topic information |
 | `produce` | Run producer script |
 | `consume` | Run consumer script |
+| `interactive` | Interactive producer: create/enter topic, send messages line by line, Ctrl+D to exit |
+| `browse` | Browse topic messages: list all topics, select one, read all messages (without updating offset) |
 | `install-deps` | Install Python dependencies |
 | `help` | Show help message |
 
