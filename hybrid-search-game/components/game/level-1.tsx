@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDown } from "lucide-react"
 import {
   BUDGET_MAP,
@@ -29,6 +29,7 @@ export function Level1() {
   const canContinue = Boolean(state.city && state.checkIn && state.budget)
   const [hasRun, setHasRun] = useState(false)
   const [poolPhase, setPoolPhase] = useState<PoolPhase>('idle')
+  const timerRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   // Reset when any chip selection changes
   useEffect(() => {
@@ -36,14 +37,21 @@ export function Level1() {
     setPoolPhase('idle')
   }, [state.city, state.checkIn, state.budget])
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => { timerRef.current.forEach(clearTimeout) }
+  }, [])
+
   function handleRun() {
     if (!canContinue || poolPhase !== 'idle') return
+    timerRef.current.forEach(clearTimeout)
+    timerRef.current = []
     setPoolPhase('phase1')
-    setTimeout(() => setPoolPhase('phase2'), 600)
-    setTimeout(() => {
+    timerRef.current.push(setTimeout(() => setPoolPhase('phase2'), 600))
+    timerRef.current.push(setTimeout(() => {
       setPoolPhase('done')
       setHasRun(true)
-    }, 1200)
+    }, 1200))
   }
 
   const shortlist = useMemo(() => {
