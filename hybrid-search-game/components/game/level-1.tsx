@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowDown } from "lucide-react"
 import {
   BUDGET_MAP,
@@ -27,11 +27,30 @@ export function Level1() {
   const scrollTo = useScrollToStage()
 
   const canContinue = Boolean(state.city && state.checkIn && state.budget)
+  const [hasRun, setHasRun] = useState(false)
+  const [poolPhase, setPoolPhase] = useState<PoolPhase>('idle')
+
+  // Reset when any chip selection changes
+  useEffect(() => {
+    setHasRun(false)
+    setPoolPhase('idle')
+  }, [state.city, state.checkIn, state.budget])
+
+  function handleRun() {
+    if (!canContinue || poolPhase !== 'idle') return
+    setPoolPhase('phase1')
+    setTimeout(() => setPoolPhase('phase2'), 600)
+    setTimeout(() => {
+      setPoolPhase('done')
+      setHasRun(true)
+    }, 1200)
+  }
+
   const shortlist = useMemo(() => {
-    if (!canContinue) return null
-    const c = getCombination(state.city!, state.checkIn!, state.budget!)
-    return c.shortlisted_hotel_ids.map(getHotel)
-  }, [canContinue, state.city, state.checkIn, state.budget])
+    if (!state.city || !state.checkIn || !state.budget) return null
+    const c = getCombination(state.city, state.checkIn, state.budget)
+    return c.shortlisted_hotel_ids.map(getHotel).slice(0, 5)
+  }, [state.city, state.checkIn, state.budget])
 
   function handleContinue() {
     goToStage("level2")
@@ -80,19 +99,21 @@ export function Level1() {
         />
       </div>
 
-      {/* Fragment stream or shortlist */}
-      <div className="relative mt-4">
-        {canContinue && shortlist ? (
-          <Shortlist hotels={shortlist.slice(0, 5)} count={shortlist.length} />
-        ) : (
-          <FragmentStream />
-        )}
-      </div>
+      <SqlPanel
+        city={state.city}
+        checkIn={state.checkIn}
+        budget={state.budget}
+        canContinue={canContinue}
+        poolPhase={poolPhase}
+        onRun={handleRun}
+      />
+
+      <DataPool hotels={shortlist} poolPhase={poolPhase} />
 
       <div className="mt-4 flex flex-col items-stretch gap-2">
         <button
           type="button"
-          disabled={!canContinue}
+          disabled={!hasRun}
           onClick={handleContinue}
           className="cartoon-btn h-12 w-full justify-center text-base sm:h-14 sm:text-lg"
         >
@@ -100,8 +121,10 @@ export function Level1() {
           <ArrowDown className="size-5" strokeWidth={3} />
         </button>
         <p className="text-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-          {canContinue
+          {hasRun
             ? "Checkpoint: Good Options reached"
+            : canContinue
+            ? "Click Run Query to filter results"
             : `${FILTER_COMBINATIONS.length} valid combinations · pick one in each group`}
         </p>
       </div>
