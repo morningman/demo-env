@@ -194,76 +194,9 @@ function FilterRow({
   )
 }
 
-function FragmentStream() {
-  const FRAGMENTS = [
-    "Harbor Inn", "Park View", "$289/nt", "Family suite", "Quiet floor",
-    "Garden Stay", "Lantern Hotel", "Near Zoo", "$499/nt", "Gaslamp",
-    "Calm vibe", "Beach path", "walkable", "$345/nt", "Seaport",
-    "family", "Pike Place", "Belltown", "Space Needle", "Downtown",
-    "Coronado", "Balboa", "Lake Union", "quiet wing", "La Jolla",
-  ]
-  const tones = ["bg-primary", "bg-accent", "bg-highlight", "bg-card"]
 
-  return (
-    <div className="cartoon-card relative h-48 overflow-hidden p-3 sm:h-56">
-      <div className="absolute left-3 top-2 z-10 flex items-center gap-1.5">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-highlight border-[1.5px] border-ink" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Result Pool · pre-filter
-        </span>
-      </div>
-      <div className="relative grid h-full grid-cols-3 content-start gap-1.5 pt-8">
-        {FRAGMENTS.map((f, i) => (
-          <span
-            key={`${f}-${i}`}
-            className={cn(
-              "truncate rounded-full border-[1.5px] border-ink px-2 py-1 text-center text-[10px] font-bold text-ink animate-drift",
-              tones[i % tones.length],
-            )}
-            style={{ animationDelay: `${(i % 6) * 0.2}s` }}
-          >
-            {f}
-          </span>
-        ))}
-      </div>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent"
-      />
-    </div>
-  )
-}
 
-function Shortlist({
-  hotels,
-  count,
-}: {
-  hotels: ReturnType<typeof getHotel>[]
-  count: number
-}) {
-  return (
-    <div className="cartoon-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="cartoon-chip cartoon-chip-primary">Shortlist · {count} stays</span>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          candidate set
-        </span>
-      </div>
-      <div className="relative space-y-2">
-        {hotels.map((h, i) => (
-          <div
-            key={h.hotel_id}
-            className={cn(
-              i === 4 && "[mask-image:linear-gradient(to_bottom,black_40%,transparent_100%)]",
-            )}
-          >
-            <HotelRow hotel={h} />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+
 
 function SqlPanel({
   city,
@@ -345,6 +278,118 @@ function SqlPanel({
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+const BLOCK_FRAGMENTS = [
+  "Harbor Inn", "$289/nt", "family-friendly", "near attractions", "quiet",
+  "Seaport", "$412/nt", "walkable", "lake view", "Pike Place",
+  "Belltown", "Coronado", "Balboa", "$345/nt", "downtown",
+  "La Jolla", "Space Needle", "calm vibe", "beach path", "zoo nearby",
+]
+
+const BLOCK_TONES = ["bg-primary", "bg-accent", "bg-highlight", "bg-card"]
+
+// Pre-computed fixed positions for the 20 blocks (% of container width/height)
+const BLOCK_LAYOUT = [
+  { top: 6,  left: 2,  w: 28, delay: 0.0 },
+  { top: 4,  left: 34, w: 22, delay: 0.4 },
+  { top: 3,  left: 60, w: 32, delay: 0.8 },
+  { top: 22, left: 8,  w: 20, delay: 0.2 },
+  { top: 20, left: 30, w: 30, delay: 0.6 },
+  { top: 18, left: 64, w: 26, delay: 1.0 },
+  { top: 38, left: 0,  w: 32, delay: 0.3 },
+  { top: 36, left: 36, w: 24, delay: 0.7 },
+  { top: 35, left: 62, w: 30, delay: 1.1 },
+  { top: 54, left: 6,  w: 26, delay: 0.5 },
+  { top: 52, left: 34, w: 28, delay: 0.9 },
+  { top: 51, left: 64, w: 24, delay: 1.3 },
+  { top: 70, left: 2,  w: 30, delay: 0.1 },
+  { top: 68, left: 36, w: 22, delay: 0.5 },
+  { top: 66, left: 60, w: 32, delay: 0.9 },
+  { top: 84, left: 8,  w: 24, delay: 0.2 },
+  { top: 82, left: 34, w: 30, delay: 0.6 },
+  { top: 80, left: 66, w: 26, delay: 1.0 },
+  { top: 14, left: 18, w: 20, delay: 0.7 },
+  { top: 44, left: 46, w: 22, delay: 1.2 },
+]
+
+function DataPool({
+  hotels,
+  poolPhase,
+}: {
+  hotels: ReturnType<typeof getHotel>[] | null
+  poolPhase: PoolPhase
+}) {
+  const showBlocks = poolPhase === 'idle' || poolPhase === 'phase1'
+  const showShortlist = poolPhase === 'phase2' || poolPhase === 'done'
+
+  return (
+    <div className="cartoon-card mt-4 overflow-hidden">
+      {/* Block field */}
+      {showBlocks && (
+        <div className="relative h-48 p-3 sm:h-56">
+          <div className="absolute left-3 top-2 z-10 flex items-center gap-1.5">
+            <span className="h-2 w-2 animate-pulse rounded-full border-[1.5px] border-ink bg-highlight" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Pool · 30+ candidates
+            </span>
+          </div>
+          {BLOCK_LAYOUT.map((b, i) => (
+            <span
+              key={i}
+              className={cn(
+                'absolute truncate rounded border-[1.5px] border-ink px-2 py-1 text-[10px] font-bold text-ink',
+                BLOCK_TONES[i % BLOCK_TONES.length],
+                poolPhase === 'idle'
+                  ? 'animate-drift'
+                  : i < 10
+                  ? 'animate-block-stay'
+                  : 'animate-filter-fade-out',
+              )}
+              style={{
+                top: `${b.top}%`,
+                left: `${b.left}%`,
+                width: `${b.w}%`,
+                animationDelay: poolPhase === 'idle' ? `${b.delay}s` : `${i * 0.025}s`,
+              }}
+            >
+              {BLOCK_FRAGMENTS[i]}
+            </span>
+          ))}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent"
+          />
+        </div>
+      )}
+
+      {/* Shortlist */}
+      {showShortlist && hotels && (
+        <div className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="cartoon-chip cartoon-chip-primary">Shortlist · {hotels.length} stays</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              candidate set
+            </span>
+          </div>
+          <div className="relative space-y-2">
+            {hotels.map((h, i) => (
+              <div
+                key={h.hotel_id}
+                className={cn(
+                  'animate-crystallise-in',
+                  i === 4 && '[mask-image:linear-gradient(to_bottom,black_40%,transparent_100%)]',
+                )}
+                style={{ animationDelay: `${i * 0.08}s` }}
+              >
+                <HotelRow hotel={h} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
