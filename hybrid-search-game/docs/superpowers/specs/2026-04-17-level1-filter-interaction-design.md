@@ -71,13 +71,14 @@ WHERE city = 'Boston'              -- filled from City chip (or placeholder)
 
 ### Run button
 
-Rendered inside the SQL panel at the bottom:
+Rendered inside the SQL panel at the bottom. Four visual states:
 
-- **Disabled state** (not all chips selected): muted background, `▶ Run Query (select all filters first)`
-- **Active state** (all chips selected): accent (mint) background, ink border, shadow, `▶ Run Query`
-- **Executed state** (after run completes): de-emphasised, `✓ Executed · 10 rows returned`
+- **Disabled** (not all chips selected): muted/cream background, `▶ Run Query (select all filters first)`, no shadow, cursor not-allowed
+- **Active** (all chips selected): accent (mint) background, ink border + shadow, `▶ Run Query`, cursor pointer
+- **Loading / in-flight** (Run clicked, animation playing): accent background at 60% opacity, spinner or pulsing dots beside label, `Running…`, cursor not-allowed, prevents double-click
+- **Executed** (animation complete, shortlist visible): de-emphasised (muted background, no shadow), `✓ Executed · 10 rows returned`, non-interactive
 
-The Run button is only interactive when all three chip groups have a selection.
+The Run button is only interactive (clickable) in the Active state.
 
 ---
 
@@ -89,7 +90,7 @@ Replaces the current `FragmentStream`. A `cartoon-card` region containing floati
 
 - Multiple blocks of varying sizes, positioned absolutely, with slight drift animation
 - Block colors cycle through primary, accent, highlight, and card backgrounds
-- Blocks contain short text fragments (hotel name fragments, price fragments, tag words) — readable but not intended to be meaningful
+- **Block text content is hardcoded** — a fixed array of ~20 decorative strings defined in the component itself (hotel name fragments, price strings, tag words). These are not sampled from `game-data.ts` and are not meant to be meaningful. Example strings: `"Harbor Inn"`, `"$289/nt"`, `"family-friendly"`, `"near attractions"`, `"quiet"`, `"Seaport"`, `"$412/nt"`, `"walkable"`, `"lake view"`, `"Pike Place"`, etc.
 - A `Pool · 30+ candidates` label with a blinking dot in the top-left
 - A fade gradient at the bottom edge
 - Block animation uses the existing `drift` keyframe (`@keyframes drift` in `globals.css`)
@@ -162,7 +163,7 @@ useEffect(() => { setHasRun(false) }, [state.city, state.checkIn, state.budget])
 
 ### Animation approach
 
-Use CSS transitions / keyframes with `framer-motion` if already available, or pure CSS with `data-` attributes to trigger the phase transitions. Prefer the approach consistent with the rest of the codebase.
+Use pure CSS transitions and keyframes with `data-` attributes or `className` toggling to drive phase transitions. The project uses `tw-animate-css` and custom keyframes in `globals.css` — there is no `framer-motion`. Add any new keyframes (`filter-fade-out`, `crystallise`) to `globals.css`.
 
 ---
 
