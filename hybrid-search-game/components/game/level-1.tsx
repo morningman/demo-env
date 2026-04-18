@@ -19,6 +19,8 @@ const CITIES: City[] = ["Boston", "Seattle", "San Diego"]
 const CHECK_INS: CheckIn[] = ["This weekend", "Next weekend"]
 const BUDGETS: BudgetBand[] = ["budget_mid", "budget_high"]
 
+type PoolPhase = 'idle' | 'phase1' | 'phase2' | 'done'
+
 export function Level1() {
   const { state } = useGame()
   const { setCity, setCheckIn, setBudget, goToStage } = useGameActions()
@@ -258,6 +260,90 @@ function Shortlist({
             <HotelRow hotel={h} />
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function SqlPanel({
+  city,
+  checkIn,
+  budget,
+  canContinue,
+  poolPhase,
+  onRun,
+}: {
+  city: City | undefined
+  checkIn: CheckIn | undefined
+  budget: BudgetBand | undefined
+  canContinue: boolean
+  poolPhase: PoolPhase
+  onRun: () => void
+}) {
+  const isLoading = poolPhase === 'phase1' || poolPhase === 'phase2'
+  const isExecuted = poolPhase === 'done'
+
+  function Val({ value, placeholder }: { value: string | undefined; placeholder: string }) {
+    if (value) {
+      return (
+        <span className="rounded border-[1.5px] border-ink bg-primary px-1 font-bold not-italic text-ink">
+          {value}
+        </span>
+      )
+    }
+    return (
+      <span className="rounded border-[1.5px] border-dashed border-ink/40 px-1 italic text-muted-foreground">
+        {placeholder}
+      </span>
+    )
+  }
+
+  const budgetSql = budget ? BUDGET_MAP[budget].sql : null
+
+  return (
+    <div className="cartoon-card mt-4 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          SQL Preview
+        </span>
+      </div>
+      <pre className="overflow-x-auto rounded border-[1.5px] border-ink/20 bg-ink/5 p-3 font-mono text-[11px] leading-relaxed text-foreground sm:text-xs">
+        <code>
+          <span className="text-muted-foreground">SELECT</span>{' '}hotel_name, nightly_price, hotel_tags{'\n'}
+          <span className="text-muted-foreground">FROM</span>{' '}hotels{'\n'}
+          <span className="text-muted-foreground">WHERE</span>{' '}city = <Val value={city} placeholder="pick city" />{'\n'}
+          {'  '}<span className="text-muted-foreground">AND</span>{' '}check_in = <Val value={checkIn} placeholder="pick check-in" />{'\n'}
+          {'  '}<span className="text-muted-foreground">AND</span>{' '}<Val value={budgetSql ?? undefined} placeholder="pick budget" />;
+        </code>
+      </pre>
+      <div className="mt-3">
+        {isExecuted ? (
+          <div className="flex h-10 items-center justify-center rounded-lg border-[2px] border-ink/30 bg-background px-4 text-[11px] font-bold text-muted-foreground sm:text-xs">
+            {/* Display string — always "10 rows", not actual count */}
+            ✓ Executed · 10 rows returned
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={!canContinue || isLoading}
+            onClick={onRun}
+            className={cn(
+              'cartoon-btn h-10 w-full justify-center text-[11px] sm:text-xs',
+              canContinue && !isLoading
+                ? 'bg-accent'
+                : 'cursor-not-allowed opacity-60',
+            )}
+          >
+            {isLoading ? (
+              <>
+                <span className="animate-pulse">●●●</span>
+                <span className="ml-2">Running…</span>
+              </>
+            ) : (
+              <>▶ {canContinue ? 'Run Query' : 'Run Query (select all filters first)'}</>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
